@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tic-Tac-Toe</title>
+<style>
+:root{--bg:#f4f1ec;--card:#fff;--ink:#1d1d22;--muted:#6b6b76;--x:#e4572e;--o:#2a7de1;--cell:#f0ece4;--win:#ffe08a;--line:#ddd6c8;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15161a;--card:#202228;--ink:#f1f1f4;--muted:#9a9aa6;--x:#ff7a52;--o:#5aa2ff;--cell:#2b2e36;--win:#6b5a1c;--line:#3a3d47}}
+:root[data-theme="dark"]{--bg:#15161a;--card:#202228;--ink:#f1f1f4;--muted:#9a9aa6;--x:#ff7a52;--o:#5aa2ff;--cell:#2b2e36;--win:#6b5a1c;--line:#3a3d47}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;justify-content:center;padding:20px 14px}
+main{width:100%;max-width:420px;background:var(--card);border-radius:20px;padding:22px 20px;box-shadow:0 8px 30px rgba(0,0,0,.12);align-self:flex-start}
+h1{margin:0 0 4px;font-size:1.7rem;text-align:center;letter-spacing:.5px}
+h1 span.x{color:var(--x)}h1 span.o{color:var(--o)}
+.sub{text-align:center;color:var(--muted);font-size:.9rem;margin:0 0 16px}
+.modes{display:flex;gap:8px;margin-bottom:14px}
+.modes button{flex:1;padding:9px;border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:10px;font-size:.9rem;cursor:pointer}
+.modes button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.score{display:flex;gap:8px;margin-bottom:14px}
+.score div{flex:1;text-align:center;background:var(--cell);border-radius:12px;padding:8px 4px;font-size:.8rem;color:var(--muted)}
+.score b{display:block;font-size:1.4rem;color:var(--ink)}
+.score .sx b{color:var(--x)}.score .so b{color:var(--o)}
+#status{text-align:center;font-weight:600;min-height:1.6em;margin-bottom:12px}
+#board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cell{aspect-ratio:1;border:none;border-radius:14px;background:var(--cell);font-size:clamp(2.4rem,14vw,3.6rem);font-weight:800;cursor:pointer;color:var(--ink);transition:transform .1s,background .2s}
+.cell:hover:not(:disabled){transform:scale(1.04)}
+.cell:disabled{cursor:default}
+.cell.x{color:var(--x)}.cell.o{color:var(--o)}
+.cell.win{background:var(--win);animation:pop .4s}
+@keyframes pop{50%{transform:scale(1.1)}}
+.actions{display:flex;gap:8px;margin-top:16px}
+.actions button{flex:1;padding:11px;border-radius:10px;border:none;font-size:.95rem;cursor:pointer;font-weight:600}
+#restart{background:var(--ink);color:var(--card)}
+#reset{background:var(--cell);color:var(--ink)}
+footer{margin-top:16px;text-align:center;font-size:.75rem;color:var(--muted)}
+button:focus-visible{outline:3px solid var(--o);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <h1><span class="x">Tic</span>-Tac-<span class="o">Toe</span></h1>
+  <p class="sub">Get three in a row to win</p>
+  <div class="modes" role="group" aria-label="Game mode">
+    <button id="m2" class="on">2 Players</button>
+    <button id="m1">vs Computer</button>
+  </div>
+  <div class="score">
+    <div class="sx">Player X<b id="sx">0</b></div>
+    <div>Draws<b id="sd">0</b></div>
+    <div class="so"><span id="onm">Player O</span><b id="so">0</b></div>
+  </div>
+  <div id="status" aria-live="polite"></div>
+  <div id="board" role="grid" aria-label="Tic-Tac-Toe board"></div>
+  <div class="actions">
+    <button id="restart">New Round</button>
+    <button id="reset">Reset Scores</button>
+  </div>
+  <footer>Josephine Anthony · Roll No. 20</footer>
+</main>
+<script>
+const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+let b,turn,over,vsCPU=false,start='X',score={X:0,O:0,D:0};
+const $=id=>document.getElementById(id),boardEl=$('board'),st=$('status');
+const cells=[...Array(9)].map((_,i)=>{const c=document.createElement('button');c.className='cell';c.setAttribute('role','gridcell');c.setAttribute('aria-label','Cell '+(i+1));c.onclick=()=>play(i);boardEl.appendChild(c);return c});
+function winner(a){for(const l of L){const[x,y,z]=l;if(a[x]&&a[x]===a[y]&&a[y]===a[z])return{p:a[x],l}}return null}
+function init(){b=Array(9).fill('');over=false;turn=start;cells.forEach(c=>{c.textContent='';c.className='cell';c.disabled=false});msg();if(vsCPU&&turn==='O')setTimeout(cpu,400)}
+function msg(){st.textContent=vsCPU?(turn==='X'?'Your turn (X)':'Computer is thinking…'):'Player '+turn+"'s turn"}
+function play(i){if(over||b[i]||(vsCPU&&turn==='O'))return;move(i)}
+function move(i){b[i]=turn;cells[i].textContent=turn;cells[i].classList.add(turn.toLowerCase());cells[i].disabled=true;
+  const w=winner(b);
+  if(w){over=true;w.l.forEach(k=>cells[k].classList.add('win'));score[w.p]++;st.textContent=vsCPU?(w.p==='X'?'🎉 You win!':'🤖 Computer wins!'):'🎉 Player '+w.p+' wins!';end();return}
+  if(b.every(Boolean)){over=true;score.D++;st.textContent="It's a draw!";end();return}
+  turn=turn==='X'?'O':'X';msg();if(vsCPU&&turn==='O')setTimeout(cpu,450)}
+function end(){cells.forEach(c=>c.disabled=true);$('sx').textContent=score.X;$('so').textContent=score.O;$('sd').textContent=score.D;start=start==='X'?'O':'X'}
+function minimax(a,p,d){const w=winner(a);if(w)return w.p==='O'?10-d:d-10;if(a.every(Boolean))return 0;
+  let best=p==='O'?-99:99;
+  for(let i=0;i<9;i++)if(!a[i]){a[i]=p;const s=minimax(a,p==='O'?'X':'O',d+1);a[i]='';best=p==='O'?Math.max(best,s):Math.min(best,s)}
+  return best}
+function cpu(){if(over)return;let bi=-1,bs=-99;
+  for(let i=0;i<9;i++)if(!b[i]){b[i]='O';const s=minimax(b,'X',1);b[i]='';if(s>bs){bs=s;bi=i}}
+  move(bi)}
+function mode(v){vsCPU=v;$('m1').classList.toggle('on',v);$('m2').classList.toggle('on',!v);$('onm').textContent=v?'Computer':'Player O';score={X:0,O:0,D:0};start='X';['sx','so','sd'].forEach(k=>$(k).textContent=0);init()}
+$('m1').onclick=()=>mode(true);$('m2').onclick=()=>mode(false);
+$('restart').onclick=init;
+$('reset').onclick=()=>{score={X:0,O:0,D:0};['sx','so','sd'].forEach(k=>$(k).textContent=0);start='X';init()};
+init();
+</script>
+</body>
+</html>
